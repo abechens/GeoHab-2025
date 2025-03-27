@@ -1,3 +1,7 @@
 rasterio
 matplotlib
 plotly
+numpy
+geopandas
+mgwr
+shapely
