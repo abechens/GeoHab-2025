@@ -5,3 +5,4 @@ numpy
 geopandas
 mgwr
 shapely
+pickle
