@@ -38,7 +38,7 @@ data = train_set_whole
 
 print(list(data))
 posibble_preds = list(data)
-items_to_remove = ['id', 'mean_gs', 'sd', 'skewness', 'kurtosis', 'current_max', 'current_min','sample_type','y_im', 'x_im', 'x_m', 'y_m', 'current_mean', 'current_range', 'gebco', 'x', 'y']
+items_to_remove = ['id', 'mean_gs', 'sd', 'skewness', 'kurtosis', 'current_max', 'current_min','sample_type','y_im', 'x_im', 'x_m', 'y_m', 'current_mean', 'current_range', 'gebco', 'x', 'y', 'comb_dist' 'island_dist']#, 'slope', 'bpi', 'aspect', 'rough']
 #remove "base" as well
 updated_list = [item for item in posibble_preds if item not in items_to_remove]
 
@@ -61,15 +61,30 @@ data['y'] = gdf.geometry.y
 print(data['x'])
 
 
-
 import itertools
-
 combinations = []
 for r in range(0, len(updated_list) + 1):
     combinations.extend(itertools.combinations(updated_list, r))
 
 # Add each combination to A
-pred_result = [predictors + list(comb) for comb in combinations]
+#pred_result_t = [predictors + list(comb) for comb in combinations]
+updated_list.append('island_dist')
+
+comb2 = []
+for r in range(1,len(updated_list)+1):
+    comb2.extend(itertools.combinations(updated_list, r))
+
+combtot = combinations + comb2
+
+#all_combinations = set(combinations_without_new + combinations_with_new)
+
+pred_result_t = [predictors + list(comb) for comb in combtot]
+
+# Remove duplicates from pred_result_t
+pred_result = []
+for comb in pred_result_t:
+    if comb not in pred_result:
+        pred_result.append(comb)
 
 coords = data[['x', 'y']]
 #data = data.drop(columns=['x', 'y'])
@@ -77,8 +92,8 @@ coords = data[['x', 'y']]
 
 
 res_dict = dict()
-for pred in range(len(pred_result)):
-    predictorsN = pred_result[pred]
+for pred in  range(len(pred_result)):
+    predictorsN =  pred_result[pred]
     print(predictorsN)
     X = data[predictorsN]
     
@@ -87,15 +102,15 @@ for pred in range(len(pred_result)):
     r2_scores = []
     for train_index, test_index in kf.split(X):
         print(count)
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-        #scaler = StandardScaler().fit(X)
-        #X_train = scaler.transform(X_train_t)
-        #X_test = scaler.transform(X_test_t)
+        X_train_t, X_test_t = X.iloc[train_index], X.iloc[test_index]
+        scaler = StandardScaler().fit(X_train_t)
+        X_train = scaler.transform(X_train_t)
+        X_test = scaler.transform(X_test_t)
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
         y_train = y_train.values.reshape(-1, 1)
         coords_train, coords_test = coords.iloc[train_index], coords.iloc[test_index]
         selector = Sel_BW(coords_train.values, y_train, X_train, multi=False) # This creates the bandwidths for different input features
-        bws = selector.search(verbose=True, search_method='golden_section', max_iter=10) # This searches for the optimal bandwidth (fields of influence)
+        bws = selector.search(verbose=True, search_method='golden_section', max_iter=100) # This searches for the optimal bandwidth (fields of influence)
         mgwr_model = GWR(coords_train.values, y_train, X_train, bws)
         results = mgwr_model.fit() # This fits the model to the data
         scale = results.scale
@@ -108,7 +123,7 @@ for pred in range(len(pred_result)):
 
 
 
-with open('r2_scores_dict.pkl', 'wb') as f:
+with open('r2_scores_dict_scaled_new_fe.pkl', 'wb') as f:
     pickle.dump(res_dict, f)
 
 
